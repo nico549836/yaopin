@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>企业批量审核 | 极简工作台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f5f7;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 极简卡片容器，无阴影过度设计 */
+        .audit-container {
+            width: 100%;
+            max-width: 1024px;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-left: 1px solid #eaeaef;
+            border-right: 1px solid #eaeaef;
+        }
+
+        /* ----- 顶部区域：极简，只有右侧输入框+确认按钮 ----- */
+        .header-area {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eceef2;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+        .batch-control {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .batch-label {
+            font-size: 13px;
+            color: #6c757d;
+            letter-spacing: 0.3px;
+        }
+        .count-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .count-input {
+            width: 100px;
+            padding: 8px 10px;
+            font-size: 14px;
+            border: 1px solid #d4d8dd;
+            border-radius: 8px;
+            outline: none;
+            background: #fff;
+            transition: all 0.1s ease;
+            font-weight: 400;
+            text-align: center;
+        }
+        .count-input:focus {
+            border-color: #000;
+            box-shadow: none;
+        }
+        .confirm-btn {
+            background: #000000;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            letter-spacing: 0.3px;
+        }
+        .confirm-btn:hover {
+            opacity: 0.8;
+        }
+        /* 极简提示小字，但保持干净 */
+        .info-note {
+            font-size: 11px;
+            color: #aaa;
+            margin-left: 12px;
+        }
+
+        /* 表头区域：极简无多余装饰 */
+        .list-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            background: #fafafc;
+            border-bottom: 1px solid #eceef2;
+            flex-shrink: 0;
+        }
+        .checkbox-col {
+            width: 44px;
+            flex-shrink: 0;
+        }
+        .company-name-header {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+            color: #3c4043;
+            letter-spacing: 0.2px;
+        }
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #000000;
+            margin: 0;
+        }
+
+        /* 中间滚动区域：干净的列表 */
+        .scroll-list-area {
+            flex: 1;
+            overflow-y: auto;
+            background: #ffffff;
+        }
+        /* 企业条目极简线条 */
+        .company-item {
+            border-bottom: 1px solid #eff1f3;
+        }
+        .company-row {
+            display: flex;
+            align-items: center;
+            padding: 14px 24px;
+            cursor: pointer;
+            background: #fff;
+            transition: background 0.1s ease;
+        }
+        .company-row:hover {
+            background: #f9f9fb;
+        }
+        .checkbox-cell {
+            width: 44px;
+            flex-shrink: 0;
+        }
+        .company-name-cell {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 450;
+            color: #1f2a3e;
+        }
+        .expand-icon {
+            font-size: 12px;
+            color: #8e9aaf;
+            width: 20px;
+            text-align: center;
+            transition: transform 0.1s;
+            font-weight: 400;
+        }
+        .company-name-text {
+            cursor: pointer;
+            border-bottom: 0px;
+            letter-spacing: -0.2px;
+        }
+        /* 展开区域极简留白 */
+        .expand-detail {
+            background: #fefefe;
+            border-top: 1px solid #f0f2f5;
+            padding: 18px 24px 20px 68px;
+            display: none;
+        }
+        .expand-detail.open {
+            display: block;
+        }
+        /* 模块样式极其简化 */
+        .info-module {
+            margin-bottom: 20px;
+        }
+        .module-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            letter-spacing: 0.3px;
+            border-left: 2px solid #d0d5dd;
+            padding-left: 10px;
+        }
+        .company-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px 20px;
+            background: #fbfbfd;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #edeff2;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .info-label {
+            font-size: 11px;
+            color: #7e8493;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .info-value {
+            font-size: 13px;
+            font-weight: 450;
+            color: #1e272e;
+            word-break: break-all;
+        }
+        .self-check-module {
+            background: #fbfbfd;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #edeff2;
+        }
+        .view-pdf-btn {
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 450;
+            color: #1f2a3e;
+            cursor: pointer;
+            transition: 0.15s;
+            margin-top: 6px;
+        }
+        .view-pdf-btn:hover {
+            background: #f2f2f5;
+            border-color: #bdc1c9;
+        }
+
+        /* 底部固定按钮区 - 极简双按钮 */
+        .footer-buttons {
+            flex-shrink: 0;
+            background: #ffffff;
+            border-top: 1px solid #eceef2;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .btn {
+            min-width: 130px;
+            padding: 9px 0;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #f2f3f7;
+            color: #1f2a3e;
+        }
+        .btn-primary {
+            background: #000000;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #2c2c2c;
+        }
+        .btn-danger {
+            background: #ffffff;
+            border: 1px solid #e0e3e9;
+            color: #b91c1c;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #fef2f2;
+            border-color: #f3b9b9;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 弹窗 - 极简无阴影过重 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 300px;
+            border-radius: 20px;
+            padding: 24px 20px 20px;
+            text-align: center;
+            border: 1px solid #e2e6ea;
+        }
+        .confirm-modal .modal-body {
+            font-size: 15px;
+            margin: 12px 0 24px;
+            color: #1e2a3a;
+            font-weight: 450;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 6px 20px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .modal-btn-cancel {
+            background: #f1f3f4;
+            color: #3c4043;
+        }
+        .modal-btn-confirm {
+            background: #000000;
+            color: white;
+        }
+        /* 自查表弹窗：只有纯黑「自查表」三个字 */
+        .pdf-preview-modal .modal-body {
+            font-size: 28px;
+            font-weight: 500;
+            color: #000000;
+            text-align: center;
+            padding: 48px 16px;
+            letter-spacing: 2px;
+        }
+        /* 滚动条极细 */
+        .scroll-list-area::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scroll-list-area::-webkit-scrollbar-track {
+            background: #f0f0f2;
+        }
+        .scroll-list-area::-webkit-scrollbar-thumb {
+            background: #cbd0d9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="audit-container">
+    <!-- 顶部区域：数量输入框+确认按钮 完全靠右 -->
+    <div class="header-area">
+        <div class="batch-control">
+            <span class="batch-label">批量展示</span>
+            <div class="count-input-group">
+                <input type="number" id="batchSizeInput" class="count-input" value="20" min="1" step="1">
+                <button id="confirmBatchBtn" class="confirm-btn">确认</button>
+            </div>
+            <span class="info-note"></span>
+        </div>
+    </div>
+
+    <!-- 表头：全选 + 企业名称 -->
+    <div class="list-header">
+        <div class="checkbox-col">
+            <input type="checkbox" id="selectAllCheckbox" class="custom-checkbox">
+        </div>
+        <div class="company-name-header">企业名称（点击展开详情）</div>
+    </div>
+
+    <!-- 滚动列表容器 -->
+    <div id="companyListContainer" class="scroll-list-area"></div>
+
+    <!-- 底部双按钮 -->
+    <div class="footer-buttons">
+        <button id="approveBtn" class="btn btn-primary">审核通过</button>
+        <button id="rejectBtn" class="btn btn-danger">驳回</button>
+    </div>
+</div>
+
+<script>
+    // ---------- 极简模拟数据 ----------
+    const generateMockCompany = (index) => {
+        const id = index + 1;
+        return {
+            id: id,
+            name: `${id}号 · 企信${Math.floor(Math.random() * 100) + 1}科技有限公司`,
+            creditCode: `91110108MA00${String(id).padStart(5, '0')}X9L`,
+            contactPerson: `李${id === 1 ? '明' : (id % 20 === 0 ? '芳' : '华')}${id}`,
+            contactPhone: `139${String(10000000 + id).slice(0, 8)}`,
+        };
+    };
+    // 数据池 500条
+    const TOTAL_MOCK = 550;
+    const fullCompanyPool = [];
+    for (let i = 0; i < TOTAL_MOCK; i++) {
+        fullCompanyPool.push(generateMockCompany(i));
+    }
+
+    // ---------- 全局状态 ----------
+    let targetDisplayCount = 20;          // 用户设定的展示数量 (用户点击确认时生效)
+    let displayedCompanies = [];           // 当前实际展示的企业列表 (截取自池子)
+    let selectedCompanyIds = new Set();     // 勾选的企业id
+    let expandedCompanyIds = new Set();     // 展开的企业id (可同时展开)
+    
+    // 滚动加载增量
+    let currentLoadedCount = 0;
+    let maxLoadLimit = 0;
+    let isLoadingMore = false;
+    
+    const container = document.getElementById('companyListContainer');
+    const batchInput = document.getElementById('batchSizeInput');
+    const confirmBatchBtn = document.getElementById('confirmBatchBtn');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const approveBtn = document.getElementById('approveBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+    
+    // ---------- 辅助函数 ----------
+    function updateButtonsState() {
+        const hasSelected = selectedCompanyIds.size > 0;
+        approveBtn.disabled = !hasSelected;
+        rejectBtn.disabled = !hasSelected;
+    }
+    
+    function updateSelectAllUI() {
+        if (!selectAllCheckbox) return;
+        if (displayedCompanies.length === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            return;
+        }
+        const allSelected = displayedCompanies.every(c => selectedCompanyIds.has(c.id));
+        const someSelected = displayedCompanies.some(c => selectedCompanyIds.has(c.id));
+        selectAllCheckbox.checked = allSelected;
+        selectAllCheckbox.indeterminate = !allSelected && someSelected;
+    }
+    
+    // 渲染整个列表 (极简刷新)
+    function renderList() {
+        if (!container) return;
+        container.innerHTML = '';
+        if (displayedCompanies.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding: 60px 20px; color:#a9b2c3; font-size:13px;">暂无企业，请调整数量后点击「确认」</div>';
+            updateSelectAllUI();
+            updateButtonsState();
+            return;
+        }
+        
+        for (let i = 0; i < displayedCompanies.length; i++) {
+            const company = displayedCompanies[i];
+            const isChecked = selectedCompanyIds.has(company.id);
+            const isExpanded = expandedCompanyIds.has(company.id);
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'company-item';
+            itemDiv.dataset.id = company.id;
+            
+            // 主行
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'company-row';
+            // 勾选框列
+            const checkCell = document.createElement('div');
+            checkCell.className = 'checkbox-cell';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'custom-checkbox';
+            cb.checked = isChecked;
+            cb.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (cb.checked) {
+                    selectedCompanyIds.add(company.id);
+                } else {
+                    selectedCompanyIds.delete(company.id);
+                }
+                renderList();  // 重新渲染保持钩子同步
+            });
+            checkCell.appendChild(cb);
+            
+            // 企业名称列（带展开箭头）
+            const nameCell = document.createElement('div');
+            nameCell.className = 'company-name-cell';
+            const expandSpan = document.createElement('span');
+            expandSpan.className = 'expand-icon';
+            expandSpan.textContent = isExpanded ? '▼' : '▶';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'company-name-text';
+            nameSpan.textContent = company.name;
+            
+            const toggleExpand = (e) => {
+                e.stopPropagation();
+                if (expandedCompanyIds.has(company.id)) {
+                    expandedCompanyIds.delete(company.id);
+                } else {
+                    expandedCompanyIds.add(company.id);
+                }
+                renderList();
+            };
+            nameSpan.addEventListener('click', toggleExpand);
+            expandSpan.addEventListener('click', toggleExpand);
+            nameCell.appendChild(expandSpan);
+            nameCell.appendChild(nameSpan);
+            
+            rowDiv.appendChild(checkCell);
+            rowDiv.appendChild(nameCell);
+            itemDiv.appendChild(rowDiv);
+            
+            // 详情区域
+            const detailDiv = document.createElement('div');
+            detailDiv.className = `expand-detail ${isExpanded ? 'open' : ''}`;
+            if (isExpanded) {
+                // 模块一 公司信息
+                const infoModule = document.createElement('div');
+                infoModule.className = 'info-module';
+                infoModule.innerHTML = `
+                    <div class="module-title">公司信息</div>
+                    <div class="company-info-grid">
+                        <div class="info-item"><span class="info-label">公司名称</span><span class="info-value">${escapeHtml(company.name)}</span></div>
+                        <div class="info-item"><span class="info-label">统一社会信用代码</span><span class="info-value">${escapeHtml(company.creditCode)}</span></div>
+                        <div class="info-item"><span class="info-label">填表联系人</span><span class="info-value">${escapeHtml(company.contactPerson)}</span></div>
+                        <div class="info-item"><span class="info-label">填表联系人手机号</span><span class="info-value">${escapeHtml(company.contactPhone)}</span></div>
+                    </div>
+                `;
+                // 模块二 自查表
+                const selfModule = document.createElement('div');
+                selfModule.className = 'self-check-module';
+                selfModule.innerHTML = `
+                    <div class="module-title">自查表</div>
+                    <button class="view-pdf-btn" data-id="${company.id}">查看自查表</button>
+                `;
+                const viewBtn = selfModule.querySelector('.view-pdf-btn');
+                viewBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showSelfCheckModal();
+                });
+                detailDiv.appendChild(infoModule);
+                detailDiv.appendChild(selfModule);
+            }
+            itemDiv.appendChild(detailDiv);
+            container.appendChild(itemDiv);
+        }
+        updateSelectAllUI();
+        updateButtonsState();
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // 自查表弹窗 —— 仅黑色字体「自查表」三个字
+    function showSelfCheckModal() {
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'modal-overlay pdf-preview-modal';
+        modalDiv.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-body" style="color:#000000; font-weight:500;">自查表</div>
+                <div class="modal-actions"><button class="modal-btn modal-btn-cancel" id="closeModalBtn">关闭</button></div>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        const closeBtn = modalDiv.querySelector('#closeModalBtn');
+        const closeModal = () => modalDiv.remove();
+        closeBtn.addEventListener('click', closeModal);
+        modalDiv.addEventListener('click', (e) => { if(e.target === modalDiv) closeModal(); });
+    }
+    
+    // 二次确认弹窗
+    function showConfirmModal(actionType) {
+        const isApprove = actionType === 'approve';
+        const msg = isApprove ? '是否确认审核通过选中企业？' : '是否确认驳回选中企业？';
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'modal-overlay confirm-modal';
+        modalDiv.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-body">${msg}</div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">取消</button>
+                    <button class="modal-btn modal-btn-confirm" id="confirmModalBtn">确认</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        const confirmAction = () => {
+            const selectedIds = Array.from(selectedCompanyIds);
+            if (selectedIds.length === 0) {
+                modalDiv.remove();
+                return;
+            }
+            // 模拟操作 + 极简alert提示（满足极简开发且无多余状态）
+            if (isApprove) {
+                alert(`✅ 已通过 ${selectedIds.length} 家企业`);
+            } else {
+                alert(`⛔ 已驳回 ${selectedIds.length} 家企业`);
+            }
+            // 操作完成后清空所有勾选
+            selectedCompanyIds.clear();
+            // 可选保留展开状态但不清展开，业务合理
+            renderList();
+            modalDiv.remove();
+        };
+        modalDiv.querySelector('#confirmModalBtn').addEventListener('click', confirmAction);
+        modalDiv.querySelector('#cancelModalBtn').addEventListener('click', () => modalDiv.remove());
+        modalDiv.addEventListener('click', (e) => { if(e.target === modalDiv) modalDiv.remove(); });
+    }
+    
+    // 重置并加载完整列表 (根据目标数量)
+    function resetAndLoadByCount(count) {
+        let validCount = Math.min(count, TOTAL_MOCK);
+        if (validCount < 1) validCount = 1;
+        targetDisplayCount = validCount;
+        maxLoadLimit = targetDisplayCount;
+        // 重置已加载数量及显示数组
+        currentLoadedCount = 0;
+        displayedCompanies = [];
+        selectedCompanyIds.clear();
+        expandedCompanyIds.clear();
+        // 滚动加载第一批
+        loadMoreCompanies(true);
+    }
+    
+    // 滚动加载更多 (初始加载或增量)
+    function loadMoreCompanies(resetScroll = false) {
+        if (isLoadingMore) return;
+        if (currentLoadedCount >= maxLoadLimit) {
+            // 已经完全加载完成，若还未渲染过但数量为0则补偿
+            if (displayedCompanies.length === 0 && maxLoadLimit > 0) {
+                // 防止边界未拉取首屏数据
+                isLoadingMore = true;
+                const needLoad = Math.min(20, maxLoadLimit);
+                const newItems = fullCompanyPool.slice(0, needLoad);
+                if (newItems.length) {
+                    displayedCompanies.push(...newItems);
+                    currentLoadedCount = newItems.length;
+                    renderList();
+                }
+                isLoadingMore = false;
+            }
+            return;
+        }
+        isLoadingMore = true;
+        const stepSize = 18;  // 平滑滚动加载
+        let toLoadCount = Math.min(stepSize, maxLoadLimit - currentLoadedCount);
+        if (toLoadCount <= 0) {
+            isLoadingMore = false;
+            return;
+        }
+        const newItems = fullCompanyPool.slice(currentLoadedCount, currentLoadedCount + toLoadCount);
+        if (newItems.length) {
+            displayedCompanies.push(...newItems);
+            currentLoadedCount += newItems.length;
+            renderList();
+        }
+        isLoadingMore = false;
+    }
+    
+    // 滚动监听事件
+    let ticking = false;
+    function handleScroll() {
+        if (!container) return;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        if (scrollTop + clientHeight >= scrollHeight - 70) {
+            if (!isLoadingMore && currentLoadedCount < maxLoadLimit) {
+                loadMoreCompanies();
+            }
+        }
+    }
+    
+    // 全选/全不选
+    function selectAllItems(checked) {
+        if (checked) {
+            displayedCompanies.forEach(c => selectedCompanyIds.add(c.id));
+        } else {
+            displayedCompanies.forEach(c => selectedCompanyIds.delete(c.id));
+        }
+        renderList();
+    }
+    
+    // 确认按钮逻辑 (获取输入框数值并重置)
+    function applyBatchNumber() {
+        let rawVal = batchInput.value.trim();
+        let num = parseInt(rawVal, 10);
+        if (isNaN(num) || num <= 0) num = 1;
+        if (num > TOTAL_MOCK) num = TOTAL_MOCK;
+        batchInput.value = num;
+        if (num === targetDisplayCount && currentLoadedCount > 0 && displayedCompanies.length === targetDisplayCount) {
+            // 相同数量不重置，但用户点击确认就强制重置为新的数量（即使相同，也重置列表让数据重新加载，保证交互符合预期）
+        }
+        // 重置所有状态，重新拉取
+        resetAndLoadByCount(num);
+    }
+    
+    // 绑定极简事件
+    function bindEvents() {
+        confirmBatchBtn.addEventListener('click', () => {
+            applyBatchNumber();
+        });
+        // 输入框支持回车确认
+        batchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyBatchNumber();
+            }
+        });
+        selectAllCheckbox.addEventListener('change', (e) => {
+            selectAllItems(e.target.checked);
+        });
+        approveBtn.addEventListener('click', () => {
+            if (selectedCompanyIds.size === 0) return;
+            showConfirmModal('approve');
+        });
+        rejectBtn.addEventListener('click', () => {
+            if (selectedCompanyIds.size === 0) return;
+            showConfirmModal('reject');
+        });
+        container.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    handleScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+    }
+    
+    // 初始化: 默认20条，并且点击确认前自动加载
+    function init() {
+        bindEvents();
+        // 首屏加载默认20条，初始数量input为20，直接调用重置加载
+        targetDisplayCount = 20;
+        maxLoadLimit = 20;
+        currentLoadedCount = 0;
+        displayedCompanies = [];
+        selectedCompanyIds.clear();
+        expandedCompanyIds.clear();
+        loadMoreCompanies();
+    }
+    init();
+</script>
+</body>
+</html>
